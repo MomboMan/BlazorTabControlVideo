@@ -1,0 +1,59 @@
+﻿@inject IMessageService MessageService
+@page "/"
+
+<div class="btn-group">
+    @foreach (var item in types)
+    {
+        if (Visible[Array.IndexOf(types, item)]) {
+            if (Array.IndexOf(types, item) == selected)
+            {
+                <button class="btn btn-primary">@item.Name</button>
+            }
+
+            else
+            {
+                <button class="btn btn-secondary" @onclick="() => selected = Array.IndexOf(types, item)">@item.Name</button>
+            }
+        }
+    }
+</div>
+
+@GetRenderFragment(types[selected])
+
+@code{
+        RenderFragment GetRenderFragment(Type type)
+        {
+            RenderFragment renderFragment = renderTreeBuilder =>
+            {
+                renderTreeBuilder.OpenComponent(0, type);
+                renderTreeBuilder.CloseComponent();
+            };
+            return renderFragment;
+        }
+        int selected;
+        ComponentBase[] components = { new Counter(), new SurveyPrompt(), new FetchData() };
+        Type[] types => components.Select(c => c.GetType()).ToArray();
+        bool[] Visible = { true, false, false };
+        static bool eventAdded = false;
+
+    protected override void OnInitialized() {
+            // subscribe to OnMessage event
+            MessageService.OnMessage += MessageHandler;
+    }
+
+    private async void MessageHandler(string message) {
+        if (message != null) {
+            if (int.TryParse(message, out int value)) {
+                selected = value;
+                Visible[selected] = true;
+                await InvokeAsync(() =>
+                {
+                    StateHasChanged();
+                    GetRenderFragment(types[selected]);
+                    StateHasChanged();
+                });
+            }
+        }
+    }
+
+}
